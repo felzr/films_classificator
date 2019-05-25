@@ -17,9 +17,13 @@ from sklearn.svm import LinearSVC
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
 from sklearn.datasets import load_files
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
-
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn import svm
+from sklearn.neural_network import MLPClassifier
 
 if __name__ == "__main__":
     # NOTE: we put the following in a 'if __name__ == "__main__"' protected
@@ -40,15 +44,45 @@ if __name__ == "__main__":
     # TASK: Build a vectorizer / classifier pipeline that filters out tokens
     # that are too rare or too frequent
 
+    pipe = Pipeline([
+        ('tfidf', TfidfVectorizer(min_df=0.05, max_df=0.95)),
+        ('clf', LinearSVC(C=1000))
+        # ('clf', svm.SVC(random_state=45))
+        # ('clf', LogisticRegression(random_state=42))
+        # ('random_forest', RandomForestClassifier(
+        #     n_estimators=200, random_state=0))
+        # ('clf', MLPClassifier(alpha=1, max_iter=1000))
+        # ('abc', AdaBoostClassifier(n_estimators=50,
+        #                          learning_rate=1))
+    ])
+
     # TASK: Build a grid search to find out whether unigrams or bigrams are
     # more useful.
     # Fit the pipeline on the training set using grid search for the parameters
+    parameters = {
+        'tfidf__ngram_range': [(1, 1), (1, 2)],
+    }
+    grid_search = GridSearchCV(estimator=pipe,
+                               param_grid=parameters,
+                               scoring='accuracy',
+                               cv=10)
+    grid_search.fit(docs_train, y_train)
 
     # TASK: print the cross-validated scores for the each parameters set
     # explored by the grid search
 
+    n_candidates = len(grid_search.cv_results_['params'])
+    for i in range(n_candidates):
+        print(i, 'params - %s; mean - %0.2f; std - %0.2f'
+              % (grid_search.cv_results_['params'][i],
+                 grid_search.cv_results_['mean_test_score'][i],
+                 grid_search.cv_results_['std_test_score'][i]))
+
     # TASK: Predict the outcome on the testing set and store it in a variable
     # named y_predicted
+
+    pipe.fit(docs_train, y_train)
+    y_predicted = pipe.predict(docs_test)
 
     # Print the classification report
     print(metrics.classification_report(y_test, y_predicted,
